@@ -1,7 +1,7 @@
 #include "common.h"
 
-const char *server_ip = "192.168.10.10";
-const char *client_ip = "192.168.10.20";
+const char *server_ip = "10.0.0.1";
+const char *client_ip = "10.0.0.2";
 
 void warmup (int *fd, struct sockaddr_in *host)
 {
@@ -35,7 +35,7 @@ int main(int argc, char *argv[])
     struct proc_config *config = parse_config(argc, argv);
 
     int key_count       = 100000;
-    int adjusted        = 90000;
+    int adjusted        = key_count;
     size_t value_size   = config->value_size;
     int i = 0;
 
@@ -68,6 +68,7 @@ int main(int argc, char *argv[])
     config_socket(&sock_fd, SOCK_DGRAM, &server, server_ip, 9999, 0);
     //warmup(&sock_fd, &server);
 
+    pkt_begin = snap_time();
     for (int i = 0; i < key_count; i++) {
         p1 = snap_time();
         sendto(sock_fd, many_values[i], value_size, 0, (struct sockaddr *) &server,
@@ -77,13 +78,9 @@ int main(int argc, char *argv[])
         p3 = snap_time();
         rx_time = handle_time(r_msg, 1);
 
-        if (i == 10000)
-            pkt_begin = snap_time();
-        if (i > 10000) {
-            total_send_time += get_elapsed(p1, p2) * 1000000;
-            total_k2u_time  += get_elapsed(rx_time, p3) * 1000000;
-            total_c2n_time  += (get_elapsed(p2, p3) - get_elapsed(rx_time, p3)) * 1000000;
-        }
+        total_send_time += get_elapsed(p1, p2) * 1000000;
+        total_k2u_time  += get_elapsed(rx_time, p3) * 1000000;
+        total_c2n_time  += (get_elapsed(p2, p3) - get_elapsed(rx_time, p3)) * 1000000;
     }
     pkt_end = snap_time();
     double e2e_time = get_elapsed(pkt_begin, pkt_end);
